@@ -1,5 +1,5 @@
-﻿
 function Zip-Subfolders
+#define function
 {
 
     $subfolders = Get-ChildItem -Path "c:\inetpub\logs\logfiles" | Where-Object { $_.PSIsContainer }
@@ -25,6 +25,7 @@ function Zip-Subfolders
 }
 
 Zip-Subfolders
+#call the function
 
 Get-ChildItem –Path "c:\inetpub\logs\logfiles" -Recurse | Where-Object {($_.LastWriteTime -lt (Get-Date).AddDays(-2))} | Remove-Item
 #Delete log files older than 2 days.
