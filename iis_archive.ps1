@@ -7,7 +7,8 @@ function Zip-Subfolders {
     #Define the path and that we're interested in the folders inside.  In this case IIS logs.
     $subfolders = Get-ChildItem -Path "c:\inetpub\logs\logfiles" | Where-Object { $_.PSIsContainer }
   
-    #loop through subdirectories  
+    #loop through subdirectories
+    #Thank you to Ronny Kaufmann for doing the heavy lifting for me.  https://stackoverflow.com/a/43732839
     ForEach ($s in $subfolders)
 	{
         $path = $s
@@ -33,7 +34,7 @@ $IISfolder = "c:\inetpub\logs\logfiles"
 If (Test-Path $IISfolder) {
 	#Call function since path exists
 	Zip-Subfolders
-    #Delete log files older than 2 days.
+        #Delete log files older than 2 days.
 	Get-ChildItem –Path "c:\inetpub\logs\logfiles" -Recurse | Where-Object {($_.LastWriteTime -lt (Get-Date).AddDays(-2))} | Remove-Item -Force
 } Else { echo "Folder not here" }	
 
