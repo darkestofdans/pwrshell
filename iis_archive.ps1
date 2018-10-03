@@ -1,43 +1,54 @@
-function Zip-Subfolders
-#define function
-{
+#Turn off StrictMode to prevent variable problems.
+Set-StrictMode -Off
 
+#create function to zip folders
+function Zip-Subfolders {
+
+    #Define the path and that we're interested in the folders inside.  In this case IIS logs.
     $subfolders = Get-ChildItem -Path "c:\inetpub\logs\logfiles" | Where-Object { $_.PSIsContainer }
-#Define the path and that we're interested in the folders inside.  In this case IIS logs.
-
-    ForEach ($s in $subfolders) 
-    {
-    #loop through subdirectories
-
+  
+    #loop through subdirectories  
+    ForEach ($s in $subfolders)
+	{
         $path = $s
         $path
+        Set-Location $path.FullName
         $fullpath = $path.FullName
         $pathName = $path.BaseName
- 
+
+        #Pick all .log files older than 2 days.		
         $items = Get-ChildItem -filter "*.log" | Where-Object {($_.LastWriteTime -lt (Get-Date).AddDays(-2))}
-        #Pick all .log files older than 2 days.
 
         $Date = (Get-Date -format "MM_dd_yyyy")
-        $archivename = $path.name + $Date + ".zip"
+        $archivename = $path.BaseName + $Date + ".zip"
+		#Outputpath puts zips into the folder that is being compressed
+        $outputpath = Join-path $fullpath $archivename
         
-        Compress-Archive -Path $items -DestinationPath $archivename -CompressionLevel optimal -update
+        Compress-Archive -Path $items -DestinationPath $outputpath -CompressionLevel optimal -update
     }
 }
 
-Zip-Subfolders
-#call the function
+#Test if inetpub logs exist, otherwise skip.
+$IISfolder = "c:\inetpub\logs\logfiles"
+If (Test-Path $IISfolder) {
+	#Call function since path exists
+	Zip-Subfolders
+    #Delete log files older than 2 days.
+	Get-ChildItem –Path "c:\inetpub\logs\logfiles" -Recurse | Where-Object {($_.LastWriteTime -lt (Get-Date).AddDays(-2))} | Remove-Item -Force
+} Else { echo "Folder not here" }	
 
-Get-ChildItem –Path "c:\inetpub\logs\logfiles" -Recurse | Where-Object {($_.LastWriteTime -lt (Get-Date).AddDays(-2))} | Remove-Item
 #Delete log files older than 2 days.
+Get-ChildItem –Path "c:\inetpub\logs\logfiles" -Recurse | Where-Object {($_.LastWriteTime -lt (Get-Date).AddDays(-2))} | Remove-Item
 
-Get-ChildItem –Path "C:\windows\softwaredistribution\download" -Recurse | Where-Object {($_.LastWriteTime -lt (Get-Date).AddDays(-14))} | Remove-Item
 #Select Windows update files older than 14 days
+Get-ChildItem –Path "C:\windows\softwaredistribution\download" -Recurse | Where-Object {($_.LastWriteTime -lt (Get-Date).AddDays(-14))} | Remove-Item
 
-$tempfolders = @("C:\Temp\*", "C:\Windows\Temp\*", "C:\Users\*\Appdata\Local\Temp\*", "C:\windows\logs\cbs\cbspersist_*")
 #Define temp folders including User's temp folders.
+$tempfolders = @("C:\Temp\*", "C:\Windows\Temp\*", "C:\Users\*\Appdata\Local\Temp\*", "C:\windows\logs\cbs\cbspersist_*")
 
-Remove-Item $tempfolders -force -recurse
 #Delete temp folders
+Remove-Item $tempfolders -force -recurse
 
-cmd /c "rd /s /q C:\`$Recycle.bin"
-#Empty recycling bin
+#Empty recycling bin as admin (needs testing)
+start-process -verb RunAs 'cmd' -ArgumentList "/c rd /s /q C:\`$Recycle.bin"
+
